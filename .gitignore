@@ -1,0 +1,5 @@
+*.json
+--output
+cairo-compile
+
+Makefile
