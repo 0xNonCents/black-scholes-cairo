@@ -134,7 +134,7 @@ func perform_product_and_shift{
         let (res) = perform_product_and_shift(v, current, index + 1)
         return (res)
     else:
-        let (shifted) = bitwise_shift_right(current, 128)
+        let (shifted) = bitwise_shift_right(current, 64)
         let (res) = perform_product_and_shift(v, shifted, index + 1)
         return (res)
     end

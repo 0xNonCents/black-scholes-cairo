@@ -72,8 +72,8 @@ end
 
 # TWO_ROOT_TWO
 #  2**63
-const TWO_ROOT_TWO = 0x16A09E667F3BCC908B2FB1366EA957D3E
-const FOUR_ROOT_TWO = 0x1306FE0A31B7152DE8D5A46305C85EDEC
+const TWO_ROOT_TWO = 0x16A09E667F3BCC908
+const FOUR_ROOT_TWO = 0x1306FE0A31B7152DE
 func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         exp : felt) -> (output : felt):
     alloc_locals
@@ -97,7 +97,7 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     let (product) = product_and_shift_vector(v3, 0x8000000000000000)
     let (shift) = bitwise_shift_right(exp, 64)
     let (result) = bitwise_shift_right(product, 63 - shift)
-    return (result)
+    return (product * 2)
 end
 
 # @notice calculate the natural exponent of x.

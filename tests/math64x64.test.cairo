@@ -11,10 +11,12 @@ from contracts.constants import FELT_MAX
 
 func test_binary_exponent{
         pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
-    let (res) = binary_exponent(0x4000000000000000)
+    let (one) = from_int(1)
+    let exp = one / 2
+    let (res) = binary_exponent(exp)
 
     let (res_int) = to_int(res)
-    assert res = 4
+    assert res = 0x16a09e667f3bcc908
 
     return ()
 end
@@ -24,16 +26,9 @@ func binary_exponent_proof_half{
     let (one) = from_int(1)
     let exp = one / 2
     let product = 0x8000000000000000 * 0x16A09E667F3BCC908
-    let (shifted) = bitwise_shift_right(product, 32)
+    let (shifted) = bitwise_shift_right(product, 64)
 
-    let (shift) = bitwise_shift_right(exp, 64)
-
-    let (result) = bitwise_shift_right(shifted, 31 - shift)
-
-    assert result = 0x16a09e667f3bcc908
-
-    %{ print(hex(ids.shifted)) %}
-    %{ print("======== ") %}
+    assert shifted * 2 = 0x16a09e667f3bcc908
     return ()
 end
 
@@ -41,28 +36,23 @@ func binary_exponent_proof_three_fourths{
         pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
     let (one) = from_int(1)
     let exp = one / 2 + one / 4
-    %{ print(hex(ids.exp)) %}
+
     let product = 0x8000000000000000 * 0x16A09E667F3BCC908
     let (shifted) = bitwise_shift_right(product, 64)
-
-    %{ print(hex(ids.shifted)) %}
 
     let product_2 = shifted * 0x1306FE0A31B7152DE
     let (shifted_2) = bitwise_shift_right(product_2, 64)
 
-    %{ print(hex(ids.shifted_2)) %}
-
-    let (shift) = bitwise_shift_right(exp, 64)
-    %{ print(ids.shift) %}
-
-    let (result) = bitwise_shift_right(shifted_2, 31 - shift)
-    %{ print(ids.result) %}
+    assert shifted_2 * 2 = 31023601929370129894
     return ()
 end
 
 func main{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
     alloc_locals
+    test_binary_exponent()
+    %{ print("======== ") %}
     binary_exponent_proof_half()
+    %{ print("======== ") %}
     binary_exponent_proof_three_fourths()
     return ()
 end
