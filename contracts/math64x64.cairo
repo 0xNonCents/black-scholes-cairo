@@ -7,8 +7,11 @@ from starkware.cairo.common.math_cmp import is_le, is_not_zero
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.pow import pow
 from starkware.cairo.common.bitwise import bitwise_and
-from contracts.constants import MIN_64_64, MAX_64_64, BITS_64, EULERS_NUM
+from contracts.constants import (
+    MIN_64_64, MAX_64_64, BITS_64, EULERS_NUM, FELT_MAX, RANGE_CHECK_BOUND)
 from contracts.vector import initialize_vector, push, product_and_shift_vector
+from contracts.hints import bitwise_shift_right
+
 # @notice Converts signed 241-bit felt to a signed 64.64-bit fixed point representation. Reverts if felt is greater than 'MAX_64_64)
 # @param 'value' signed 241-bit felt
 # @returns the 64.64-bit fixed point number
@@ -22,7 +25,7 @@ end
 # @param input signed fixed point number
 # @ returns the signed 64 bit rounded number
 func to_int{pedersen_ptr : HashBuiltin*, range_check_ptr}(input : felt) -> (output : felt):
-    let (quotient, rem) = signed_div_rem(input, BITS_64, BITS_64)
+    let (quotient, rem) = signed_div_rem(input, BITS_64, RANGE_CHECK_BOUND / 2)
     return (quotient)
 end
 
@@ -82,15 +85,18 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     end
 
     let (v) = initialize_vector()
+
     let (mask_63) = bitwise_and(exp, 2 ** 63)
     let (has_63_bit) = is_not_zero(mask_63)
-    push(v, (TWO_ROOT_TWO * has_63_bit) + 1)
+    let (v2) = push(v, (TWO_ROOT_TWO * has_63_bit) + 1)
 
     let (mask_62) = bitwise_and(exp, 2 ** 62)
     let (has_62_bit) = is_not_zero(mask_62)
-    push(v, FOUR_ROOT_TWO)
+    let (v3) = push(v2, (FOUR_ROOT_TWO * has_62_bit) + 1)
 
-    let (result) = product_and_shift_vector(v, 0x8000000000000000)
+    let (product) = product_and_shift_vector(v3, 0x8000000000000000)
+    let (shift) = bitwise_shift_right(exp, 64)
+    let (result) = bitwise_shift_right(product, 63 - shift)
     return (result)
 end
 

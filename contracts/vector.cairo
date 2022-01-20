@@ -128,16 +128,22 @@ func perform_product_and_shift{
     if index == v.size:
         return (result)
     end
-
     let current = v.s[index] * result
-    let (shifted) = bitwise_shift_right(current, 64)
-    let (res) = perform_product_and_shift(v, shifted, index + 1)
-    return (res)
+
+    if current == result:
+        let (res) = perform_product_and_shift(v, current, index + 1)
+        return (res)
+    else:
+        let (shifted) = bitwise_shift_right(current, 128)
+        let (res) = perform_product_and_shift(v, shifted, index + 1)
+        return (res)
+    end
 end
 
 func product_and_shift_vector{
         bitwise_ptr : BitwiseBuiltin*, pedersen_ptr : HashBuiltin*, range_check_ptr}(
         v : vector, initial_value : felt) -> (res : felt):
     let (product) = perform_product_and_shift(v, initial_value, 0)
+
     return (product)
 end
