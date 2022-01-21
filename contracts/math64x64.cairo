@@ -49,6 +49,17 @@ func fixed_64_64_sub{range_check_ptr}(x : felt, y : felt) -> (output : felt):
     return (res)
 end
 
+# @notice adds two signed 64.64-bit fixed point numbers
+# @param x a 64.64-bit fixed point number
+# @param y a 64.64-bit fixed point number
+func fixed_64_64_mul{range_check_ptr}(x : felt, y : felt) -> (output : felt):
+    let res = x * y
+    let (quotient, rem) = signed_div_rem(res, 64, BITS_64)
+    assert_le(MIN_64_64, quotient)
+    assert_le(quotient, MAX_64_64)
+    return (quotient)
+end
+
 # @notice divides two signed 64.64-bit fixed point numbers
 func fixed_64_64_div{range_check_ptr}(x : felt, y : felt) -> (output : felt):
     assert_not_zero(y)
@@ -89,12 +100,10 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     let (mask_63) = bitwise_and(exp, 2 ** 63)
     let (has_63_bit) = is_not_zero(mask_63)
     let (v2) = push(v, (TWO_ROOT_TWO * has_63_bit) + 1)
-    %{ print(ids.has_63_bit) %}
 
     let (mask_62) = bitwise_and(exp, 2 ** 62)
     let (has_62_bit) = is_not_zero(mask_62)
     let (v3) = push(v2, (FOUR_ROOT_TWO * has_62_bit) + 1)
-    %{ print(ids.has_62_bit) %}
 
     let (product) = product_and_shift_vector(v3, 0x8000000000000000)
     let (shift) = bitwise_shift_right(exp, 64)
@@ -178,4 +187,95 @@ func foo_shift{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : Bitwi
     let (updated_res) = foo_shift(ux_2, shifted, result)
 
     return (updated_res)
+end
+
+func fixed_64_64_ln{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        x : felt) -> (res : felt):
+    let (is_x_nonzero) = is_not_zero(x)
+
+    if is_x_nonzero == 0:
+        return (0)
+    end
+
+    let (log_2) = fixed_64_64_log_2(x)
+    let (ln) = bitwise_shift_right(log_2 * 0xB17217F7D1CF79AB, 64)
+    return (ln)
+end
+
+func fixed_64_64_sqrt_u{
+        pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(x : felt) -> (
+        res : felt):
+    alloc_locals
+    let r = 1
+
+    let (is_x_le_128) = is_le(2 ** 128, x)
+    let (x_2) = bitwise_shift_right(x, is_x_le_128 * 128)
+    let r_2 = (r * 2 ** 64 * is_x_le_128) + (r * (1 - is_x_le_128))
+
+    let (is_x_le_128_2) = is_le(2 ** 64, x_2)
+    let (x_3) = bitwise_shift_right(x_2, is_x_le_128_2 * 64)
+    let r_3 = (r_2 * 2 ** 32 * is_x_le_128_2) + (r_2 * (1 - is_x_le_128_2))
+
+    let (is_x_le_128_3) = is_le(2 ** 32, x_3)
+    let (x_4) = bitwise_shift_right(x_3, is_x_le_128_3 * 32)
+    let r_4 = (r_3 * 2 ** 16 * is_x_le_128_3) + (r_3 * (1 - is_x_le_128_3))
+
+    let (is_x_le_128_4) = is_le(2 ** 16, x_4)
+    let (x_5) = bitwise_shift_right(x_4, is_x_le_128_4 * 16)
+    let r_5 = (r_4 * 2 ** 8 * is_x_le_128_4) + (r_4 * (1 - is_x_le_128_4))
+
+    let (is_x_le_128_5) = is_le(2 ** 8, x_5)
+    let (x_6) = bitwise_shift_right(x_5, is_x_le_128_5 * 8)
+    let r_6 = (r_5 * 2 ** 4 * is_x_le_128_5) + (r_5 * (1 - is_x_le_128_5))
+
+    let (is_x_le_128_6) = is_le(2 ** 4, x_6)
+    let (x_7) = bitwise_shift_right(x_6, is_x_le_128_6 * 4)
+    let r_7 = (r_6 * 2 ** 2 * is_x_le_128_6) + (r_6 * (1 - is_x_le_128_6))
+
+    let (is_x_le_128_7) = is_le(2 ** 2, x_7)
+    let (x_8) = bitwise_shift_right(x_7, is_x_le_128_7 * 2)
+    let r_8 = (r_7 * 2 * is_x_le_128_7) + (r_7 * (1 - is_x_le_128_7))
+
+    let q_1 = (r_8 + x) / r_8
+    let (r_9) = bitwise_shift_right(q_1, 1)
+
+    let (q_2) = fixed_64_64_div(r_9 + x, r_9)
+    let (r_10) = bitwise_shift_right(q_2, 1)
+
+    let (q_3) = fixed_64_64_div(r_10 + x, r_10)
+    let (r_11) = bitwise_shift_right(q_3, 1)
+
+    let (q_4) = fixed_64_64_div(r_11 + x, r_11)
+    let (r_12) = bitwise_shift_right(q_4, 1)
+
+    let (q_5) = fixed_64_64_div(r_12 + x, r_12)
+    let (r_13) = bitwise_shift_right(q_5, 1)
+
+    let (q_6) = fixed_64_64_div(r_13 + x, r_13)
+    let (r_14) = bitwise_shift_right(q_6, 1)
+
+    let (q_7) = fixed_64_64_div(r_14 + x, r_14)
+    let (r_15) = bitwise_shift_right(q_7, 1)
+
+    let (r_alt) = fixed_64_64_div(x, r_15)
+
+    let (is_r_alt_larger) = is_le(r_15, r_alt + 1)
+    if is_r_alt_larger == 1:
+        return (r_15)
+    else:
+        return (r_alt)
+    end
+end
+
+func fixed_64_64_sqrt{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        x : felt) -> (res : felt):
+    let (is_x_nonzero) = is_not_zero(x)
+
+    if is_x_nonzero == 0:
+        return (0)
+    end
+
+    let (res) = fixed_64_64_sqrt_u(x * 2 ** 64)
+
+    return (res)
 end

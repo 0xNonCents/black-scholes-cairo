@@ -3,7 +3,7 @@
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from contracts.math64x64 import (
     from_int, to_int, fixed_64_64_add, fixed_64_64_sub, fixed_64_64_div, fixed_64_64_abs,
-    fixed_64_64_neg, fixed_64_64_exp, binary_exponent, fixed_64_64_log_2)
+    fixed_64_64_neg, fixed_64_64_exp, binary_exponent, fixed_64_64_log_2, fixed_64_64_sqrt)
 from contracts.hints import bitwise_shift_right
 from contracts.constants import FELT_MAX
 
@@ -74,8 +74,20 @@ func test_log_2{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : Bitw
     return ()
 end
 
+func test_sqrt{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
+    let (one) = from_int(1)
+    let (res) = fixed_64_64_sqrt(one)
+
+    assert res = 1
+
+    return ()
+end
+
 func main{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
     alloc_locals
+
+    test_sqrt()
+    %{ print("======== ") %}
     test_log_2()
     %{ print("======== ") %}
     test_natural_exponent()
@@ -85,5 +97,6 @@ func main{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBui
     binary_exponent_proof_half()
     %{ print("======== ") %}
     binary_exponent_proof_three_fourths()
+
     return ()
 end
