@@ -75,7 +75,7 @@ func test_log_2{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : Bitw
 end
 
 func test_sqrt{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
-    let (one) = from_int(1)
+    let (one) = from_int(9)
     let (res) = fixed_64_64_sqrt(one)
 
     assert res = 1

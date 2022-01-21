@@ -207,7 +207,6 @@ func fixed_64_64_sqrt_u{
         res : felt):
     alloc_locals
     let r = 1
-
     let (is_x_le_128) = is_le(2 ** 128, x)
     let (x_2) = bitwise_shift_right(x, is_x_le_128 * 128)
     let r_2 = (r * 2 ** 64 * is_x_le_128) + (r * (1 - is_x_le_128))
@@ -239,28 +238,27 @@ func fixed_64_64_sqrt_u{
     let q_1 = (r_8 + x) / r_8
     let (r_9) = bitwise_shift_right(q_1, 1)
 
-    let (q_2) = fixed_64_64_div(r_9 + x, r_9)
+    let q_2 = (r_9 + x) / r_9
     let (r_10) = bitwise_shift_right(q_2, 1)
 
-    let (q_3) = fixed_64_64_div(r_10 + x, r_10)
+    let q_3 = (r_10 + x) / r_10
     let (r_11) = bitwise_shift_right(q_3, 1)
 
-    let (q_4) = fixed_64_64_div(r_11 + x, r_11)
+    let q_4 = (r_11 + x) / r_11
     let (r_12) = bitwise_shift_right(q_4, 1)
 
-    let (q_5) = fixed_64_64_div(r_12 + x, r_12)
+    let q_5 = (r_12 + x) / r_12
     let (r_13) = bitwise_shift_right(q_5, 1)
 
-    let (q_6) = fixed_64_64_div(r_13 + x, r_13)
+    let q_6 = (r_13 + x) / r_13
     let (r_14) = bitwise_shift_right(q_6, 1)
 
-    let (q_7) = fixed_64_64_div(r_14 + x, r_14)
+    let q_7 = (r_14 + x) / r_14
     let (r_15) = bitwise_shift_right(q_7, 1)
 
-    let (r_alt) = fixed_64_64_div(x, r_15)
-
-    let (is_r_alt_larger) = is_le(r_15, r_alt + 1)
-    if is_r_alt_larger == 1:
+    let r_alt = x / r_15
+    let (r_15_le_r_alt) = is_le(r_15, r_alt + 1)
+    if r_15_le_r_alt == 1:
         return (r_15)
     else:
         return (r_alt)
@@ -275,7 +273,7 @@ func fixed_64_64_sqrt{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr 
         return (0)
     end
 
-    let (res) = fixed_64_64_sqrt_u(x * 2 ** 64)
+    let (res) = fixed_64_64_sqrt_u(x)
 
     return (res)
 end
