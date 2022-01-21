@@ -4,7 +4,7 @@ func bitwise_shift_left{range_check_ptr}(value : felt, shift : felt) -> (output 
         from starkware.cairo.common.math_utils import assert_integer
         assert_integer(ids.value)
         assert_integer(ids.shift)
-        res = ids.value << ids.shift
+        ids.shifted = ids.value << ids.shift
         #not working as expected
         assert ids.shifted <= 2**251 ,  f'oveflow: {ids.shifted} > 2^251 + 1.'
     %}

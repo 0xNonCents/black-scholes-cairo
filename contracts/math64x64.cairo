@@ -10,7 +10,7 @@ from starkware.cairo.common.bitwise import bitwise_and
 from contracts.constants import (
     MIN_64_64, MAX_64_64, BITS_64, EULERS_NUM, FELT_MAX, RANGE_CHECK_BOUND)
 from contracts.vector import initialize_vector, push, product_and_shift_vector
-from contracts.hints import bitwise_shift_right
+from contracts.hints import bitwise_shift_right, bitwise_shift_left
 
 # @notice Converts signed 241-bit felt to a signed 64.64-bit fixed point representation. Reverts if felt is greater than 'MAX_64_64)
 # @param 'value' signed 241-bit felt
@@ -89,10 +89,12 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     let (mask_63) = bitwise_and(exp, 2 ** 63)
     let (has_63_bit) = is_not_zero(mask_63)
     let (v2) = push(v, (TWO_ROOT_TWO * has_63_bit) + 1)
+    %{ print(ids.has_63_bit) %}
 
     let (mask_62) = bitwise_and(exp, 2 ** 62)
     let (has_62_bit) = is_not_zero(mask_62)
     let (v3) = push(v2, (FOUR_ROOT_TWO * has_62_bit) + 1)
+    %{ print(ids.has_62_bit) %}
 
     let (product) = product_and_shift_vector(v3, 0x8000000000000000)
     let (shift) = bitwise_shift_right(exp, 64)
@@ -100,8 +102,9 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     return (product * 2)
 end
 
-# @notice calculate the natural exponent of x.
-func fixed_64_64_exp{range_check_ptr}(exponent : felt) -> (output : felt):
+# @notice calculate the natural exponent of x (e^x)
+func fixed_64_64_exp{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        exponent : felt) -> (output : felt):
     assert_lt(exponent, 0x400000000000000000)
     let (is_underflow) = is_le(exponent, -0x400000000000000001)
 
@@ -109,9 +112,70 @@ func fixed_64_64_exp{range_check_ptr}(exponent : felt) -> (output : felt):
         return (0)
     end
 
-    let (math_1, rem) = signed_div_rem(
-        exponent * 0x171547652B82FE1777D0FFDA0D23A7D12, 2 ** 128, 2 ** 128)
+    let (math_1) = bitwise_shift_right(exponent * 0x171547652B82FE177, 64)
+    %{ print(ids.math_1) %}
+    let (res) = binary_exponent(math_1)
+    return (res * 2)
+end
 
-    let (res) = pow(BITS_64 * EULERS_NUM, exponent)
-    return (res)
+func fixed_64_64_log_2{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        x : felt) -> (res : felt):
+    alloc_locals
+    let (not_zero) = is_not_zero(x)
+    assert not_zero = 1
+
+    let msb = 0
+
+    let (is_greater_64) = is_le(0x10000000000000000, x)
+    let (x_2) = bitwise_shift_right(x, is_greater_64 * 64)
+    let msb_2 = msb + is_greater_64 * 64
+
+    let (is_greater_64_2) = is_le(0x100000000, x_2)
+    let (x_3) = bitwise_shift_right(x_2, is_greater_64_2 * 32)
+    let msb_3 = msb_2 + is_greater_64_2 * 32
+
+    let (is_greater_64_3) = is_le(0x10000, x_3)
+    let (x_4) = bitwise_shift_right(x_3, is_greater_64_3 * 16)
+    let msb_4 = msb_3 + is_greater_64_3 * 16
+
+    let (is_greater_64_4) = is_le(0x100, x_4)
+    let (x_5) = bitwise_shift_right(x_4, is_greater_64_4 * 8)
+    let msb_5 = msb_4 + is_greater_64_4 * 8
+
+    let (is_greater_64_5) = is_le(0x10, x_5)
+    let (x_6) = bitwise_shift_right(x_5, is_greater_64_5 * 4)
+    let msb_6 = msb_5 + is_greater_64_5 * 4
+
+    let (is_greater_64_6) = is_le(0x4, x_6)
+    let (x_7) = bitwise_shift_right(x_6, is_greater_64_6 * 2)
+    let msb_7 = msb_6 + is_greater_64_6 * 2
+
+    let (is_greater_64_7) = is_le(0x2, x_7)
+    let (x_8) = bitwise_shift_right(x_7, is_greater_64_7 * 1)
+    let msb_8 = msb_7 + is_greater_64_7 * 1
+
+    let result = (msb_8 - 64) * 2 ** 64
+
+    let (ux) = bitwise_shift_left(x, 127 - msb_8)
+
+    let (log_2) = foo_shift(ux / 2 ** 64, 0x8000000000000000, result)
+
+    return (log_2)
+end
+
+# I seriously don't know what this does. Please help
+func foo_shift{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        ux : felt, bit : felt, res : felt) -> (res : felt):
+    let (is_bit_nonzero) = is_not_zero(bit)
+    if is_bit_nonzero == 0:
+        return (res)
+    end
+    let ux_1 = ux * ux
+    let (b) = bitwise_shift_right(ux_1, 127)
+    let (ux_2) = bitwise_shift_right(ux_1, 63 + b)
+    let result = (bit * b) + res
+    let (shifted) = bitwise_shift_right(bit, 1)
+    let (updated_res) = foo_shift(ux_2, shifted, result)
+
+    return (updated_res)
 end
