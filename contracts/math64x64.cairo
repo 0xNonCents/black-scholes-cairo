@@ -2,11 +2,14 @@
 # @dev https://toolkit.abdk.consulting/math#convert-number
 
 from starkware.cairo.common.math import (
-    assert_not_zero, assert_le, signed_div_rem, abs_value, assert_lt)
+    assert_not_zero, assert_le, signed_div_rem, abs_value, assert_lt, split_felt)
 from starkware.cairo.common.math_cmp import is_le, is_not_zero
 from starkware.cairo.common.cairo_builtins import HashBuiltin, BitwiseBuiltin
 from starkware.cairo.common.pow import pow
 from starkware.cairo.common.bitwise import bitwise_and
+from starkware.cairo.common.Uint256 import (
+    Uint256, uint256_le, uint256_shr, uint256_unsigned_div_rem, uint256_add, uint256_lt,
+    uint256_shl)
 from contracts.constants import (
     MIN_64_64, MAX_64_64, BITS_64, EULERS_NUM, FELT_MAX, RANGE_CHECK_BOUND)
 from contracts.vector import initialize_vector, push, product_and_shift_vector
@@ -203,65 +206,112 @@ func fixed_64_64_ln{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : 
 end
 
 func fixed_64_64_sqrt_u{
-        pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(x : felt) -> (
-        res : felt):
+        pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
+        x : Uint256) -> (res_128 : felt):
     alloc_locals
     let r = 1
-    let (is_x_le_128) = is_le(2 ** 128, x)
-    let (x_2) = bitwise_shift_right(x, is_x_le_128 * 128)
+
+    %{ print(ids.x.low) %}
+    %{ print(ids.x.high) %}
+
+    let (is_x_le_128) = uint256_le(Uint256(0, 1), x)
+    let (x_2) = uint256_shr(x, Uint256(is_x_le_128 * 128, 0))
     let r_2 = (r * 2 ** 64 * is_x_le_128) + (r * (1 - is_x_le_128))
 
-    let (is_x_le_128_2) = is_le(2 ** 64, x_2)
-    let (x_3) = bitwise_shift_right(x_2, is_x_le_128_2 * 64)
+    let (is_x_le_128_2) = uint256_le(Uint256(2 ** 64, 0), x_2)
+    let (x_3) = uint256_shr(x_2, Uint256(is_x_le_128_2 * 64, 0))
     let r_3 = (r_2 * 2 ** 32 * is_x_le_128_2) + (r_2 * (1 - is_x_le_128_2))
 
-    let (is_x_le_128_3) = is_le(2 ** 32, x_3)
-    let (x_4) = bitwise_shift_right(x_3, is_x_le_128_3 * 32)
+    let (is_x_le_128_3) = uint256_le(Uint256(2 ** 32, 0), x_3)
+    let (x_4) = uint256_shr(x_3, Uint256(is_x_le_128_3 * 32, 0))
     let r_4 = (r_3 * 2 ** 16 * is_x_le_128_3) + (r_3 * (1 - is_x_le_128_3))
 
-    let (is_x_le_128_4) = is_le(2 ** 16, x_4)
-    let (x_5) = bitwise_shift_right(x_4, is_x_le_128_4 * 16)
+    let (is_x_le_128_4) = uint256_le(Uint256(2 ** 16, 0), x_4)
+    let (x_5) = uint256_shr(x_4, Uint256(is_x_le_128_4 * 16, 0))
     let r_5 = (r_4 * 2 ** 8 * is_x_le_128_4) + (r_4 * (1 - is_x_le_128_4))
 
-    let (is_x_le_128_5) = is_le(2 ** 8, x_5)
-    let (x_6) = bitwise_shift_right(x_5, is_x_le_128_5 * 8)
+    let (is_x_le_128_5) = uint256_le(Uint256(2 ** 8, 0), x_5)
+    let (x_6) = uint256_shr(x_5, Uint256(is_x_le_128_5 * 8, 0))
     let r_6 = (r_5 * 2 ** 4 * is_x_le_128_5) + (r_5 * (1 - is_x_le_128_5))
 
-    let (is_x_le_128_6) = is_le(2 ** 4, x_6)
-    let (x_7) = bitwise_shift_right(x_6, is_x_le_128_6 * 4)
+    let (is_x_le_128_6) = uint256_le(Uint256(2 ** 4, 0), x_6)
+    let (x_7) = uint256_shr(x_6, Uint256(is_x_le_128_6 * 4, 0))
     let r_7 = (r_6 * 2 ** 2 * is_x_le_128_6) + (r_6 * (1 - is_x_le_128_6))
 
-    let (is_x_le_128_7) = is_le(2 ** 2, x_7)
-    let (x_8) = bitwise_shift_right(x_7, is_x_le_128_7 * 2)
+    let (is_x_le_128_7) = uint256_le(Uint256(2 ** 2, 0), x_7)
+    let (x_8) = uint256_shr(x_7, Uint256(is_x_le_128_7 * 2, 0))
     let r_8 = (r_7 * 2 * is_x_le_128_7) + (r_7 * (1 - is_x_le_128_7))
 
-    let q_1 = (r_8 + x) / r_8
-    let (r_9) = bitwise_shift_right(q_1, 1)
+    let uint_one = Uint256(1, 0)
 
-    let q_2 = (r_9 + x) / r_9
-    let (r_10) = bitwise_shift_right(q_2, 1)
+    %{ print(ids.r_8) %}
 
-    let q_3 = (r_10 + x) / r_10
-    let (r_11) = bitwise_shift_right(q_3, 1)
+    let (high, low) = split_felt(r_8)
+    let r_uint256 = Uint256(low, high)
 
-    let q_4 = (r_11 + x) / r_11
-    let (r_12) = bitwise_shift_right(q_4, 1)
+    let (q_1, rem) = uint256_unsigned_div_rem(x, r_uint256)
+    let (sum_1, carry) = uint256_add(r_uint256, q_1)
+    %{ print(ids.carry) %}
 
-    let q_5 = (r_12 + x) / r_12
-    let (r_13) = bitwise_shift_right(q_5, 1)
+    %{ print(ids.sum_1.low) %}
+    %{ print(ids.sum_1.high) %}
 
-    let q_6 = (r_13 + x) / r_13
-    let (r_14) = bitwise_shift_right(q_6, 1)
+    %{ print("r_uint256") %}
+    %{ print(ids.r_uint256.low) %}
+    %{ print(ids.r_uint256.high) %}
 
-    let q_7 = (r_14 + x) / r_14
-    let (r_15) = bitwise_shift_right(q_7, 1)
+    %{ print("q_1") %}
+    %{ print(ids.q_1.low) %}
+    %{ print(ids.q_1.high) %}
 
-    let r_alt = x / r_15
-    let (r_15_le_r_alt) = is_le(r_15, r_alt + 1)
-    if r_15_le_r_alt == 1:
-        return (r_15)
+    let (r_9) = uint256_shr(sum_1, uint_one)
+
+    %{ print("r_9") %}
+    %{ print(ids.r_9.low) %}
+    %{ print(ids.r_9.high) %}
+
+    let (q_2, _) = uint256_unsigned_div_rem(x, r_9)
+    let (sum_2, carry) = uint256_add(r_9, q_2)
+    let (r_10) = uint256_shr(sum_2, uint_one)
+
+    let (q_3, _) = uint256_unsigned_div_rem(x, r_10)
+    let (sum_3, carry) = uint256_add(r_10, q_3)
+    let (r_11) = uint256_shr(sum_3, uint_one)
+
+    let (q_4, _) = uint256_unsigned_div_rem(x, r_11)
+    let (sum_4, carry) = uint256_add(r_11, q_4)
+    let (r_12) = uint256_shr(sum_4, uint_one)
+
+    let (q_5, _) = uint256_unsigned_div_rem(x, r_12)
+    let (sum_5, carry) = uint256_add(r_12, q_5)
+    let (r_13) = uint256_shr(sum_5, uint_one)
+
+    let (q_6, _) = uint256_unsigned_div_rem(x, r_13)
+    let (sum_6, carry) = uint256_add(r_13, q_6)
+    let (r_14) = uint256_shr(sum_6, uint_one)
+
+    let (q_7, _) = uint256_unsigned_div_rem(x, r_14)
+    let (sum_7, carry) = uint256_add(r_14, q_7)
+    let (r_15) = uint256_shr(q_7, uint_one)
+
+    let (q_8, _) = uint256_unsigned_div_rem(x, r_15)
+    let (sum_8, carry) = uint256_add(r_15, q_8)
+    let (r_16) = uint256_shr(q_8, uint_one)
+
+    let (r_alt, _) = uint256_unsigned_div_rem(x, r_16)
+
+    let (r_16_le_r_alt) = uint256_lt(r_16, r_alt)
+
+    %{ print(ids.r_16.low) %}
+    %{ print(ids.r_16.high) %}
+
+    %{ print(ids.r_alt.low) %}
+    %{ print(ids.r_alt.high) %}
+
+    if r_16_le_r_alt == 1:
+        return (r_16.low)
     else:
-        return (r_alt)
+        return (r_alt.low)
     end
 end
 
@@ -273,7 +323,12 @@ func fixed_64_64_sqrt{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr 
         return (0)
     end
 
-    let (res) = fixed_64_64_sqrt_u(x)
+    # should check x is 64.64
+
+    let (x_uint) = uint256_shl(Uint256(x, 0), Uint256(64, 0))
+    %{ print(ids.x_uint.low) %}
+    %{ print(ids.x_uint.high) %}
+    let (res) = fixed_64_64_sqrt_u(x_uint)
 
     return (res)
 end
