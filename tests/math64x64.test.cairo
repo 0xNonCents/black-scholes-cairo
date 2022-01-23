@@ -12,11 +12,15 @@ from starkware.cairo.common.Uint256 import Uint256
 
 func test_binary_exponent{
         pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
+    let (zero) = from_int(0)
+    let (res_zero) = binary_exponent(zero)
+
+    assert res_zero = 0x10000000000000000
+
     let (one) = from_int(1)
     let exp = one / 2
     let (res) = binary_exponent(exp)
 
-    let (res_int) = to_int(res)
     assert res = 0x16a09e667f3bcc908
 
     return ()
@@ -51,12 +55,24 @@ end
 func test_natural_exponent{
         pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
     alloc_locals
+
+    let (zero) = from_int(0)
+    let (res_exp_zero) = fixed_64_64_exp(zero)
+    assert res_exp_zero = 18446744073709551616
+
     let (one) = from_int(1)
     let (res) = fixed_64_64_exp(one)
 
     # # 2.378414230005442133429 matches output of solidity counterpart with limited fraction exponents,
     # however we should add the other fractional exponents to get the mathematically correct answers
-    assert res = 0x260dfc14636e2a5bd
+    assert res = 0x260dfc14636e2a5bc
+
+    let (neg_one) = from_int(-1)
+    let (half_res) = fixed_64_64_exp(neg_one)
+
+    # # 2.378414230005442133429 matches output of solidity counterpart with limited fraction exponents,
+    # however we should add the other fractional exponents to get the mathematically correct answers
+    assert half_res = 0x260dfc14636e2a5bd
 
     return ()
 end
@@ -92,13 +108,14 @@ end
 func main{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}():
     alloc_locals
 
+    test_binary_exponent()
+    %{ print("======== ") %}
     test_sqrt()
     %{ print("======== ") %}
     test_log_2()
     %{ print("======== ") %}
     test_natural_exponent()
-    %{ print("======== ") %}
-    test_binary_exponent()
+
     %{ print("======== ") %}
     binary_exponent_proof_half()
     %{ print("======== ") %}

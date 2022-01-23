@@ -57,7 +57,7 @@ end
 # @param y a 64.64-bit fixed point number
 func fixed_64_64_mul{range_check_ptr}(x : felt, y : felt) -> (output : felt):
     let res = x * y
-    let (quotient, rem) = signed_div_rem(res, 64, BITS_64)
+    let (quotient, rem) = signed_div_rem(res, 64, MAX_64_64)
     assert_le(MIN_64_64, quotient)
     assert_le(quotient, MAX_64_64)
     return (quotient)
@@ -102,21 +102,27 @@ func binary_exponent{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
 
     let (mask_63) = bitwise_and(exp, 2 ** 63)
     let (has_63_bit) = is_not_zero(mask_63)
-    let (v2) = push(v, (TWO_ROOT_TWO * has_63_bit) + 1)
+    let (v2) = push(v, (TWO_ROOT_TWO * has_63_bit) + (1 - has_63_bit))
 
     let (mask_62) = bitwise_and(exp, 2 ** 62)
     let (has_62_bit) = is_not_zero(mask_62)
-    let (v3) = push(v2, (FOUR_ROOT_TWO * has_62_bit) + 1)
+    let (v3) = push(v2, (FOUR_ROOT_TWO * has_62_bit) + (1 - has_62_bit))
 
-    let (product) = product_and_shift_vector(v3, 0x8000000000000000)
+    let (product) = product_and_shift_vector(v3, 0x80000000000000000000000000000000)
+
     let (shift) = bitwise_shift_right(exp, 64)
+
+    %{ print(ids.product) %}
+    %{ print(ids.shift) %}
     let (result) = bitwise_shift_right(product, 63 - shift)
-    return (product * 2)
+    return (result)
 end
 
 # @notice calculate the natural exponent of x (e^x)
 func fixed_64_64_exp{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
         exponent : felt) -> (output : felt):
+    %{print("exponent")%}
+    %{ print(ids.exponent)%}
     assert_lt(exponent, 0x400000000000000000)
     let (is_underflow) = is_le(exponent, -0x400000000000000001)
 
@@ -125,9 +131,8 @@ func fixed_64_64_exp{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr :
     end
 
     let (math_1) = bitwise_shift_right(exponent * 0x171547652B82FE177, 64)
-    %{ print(ids.math_1) %}
     let (res) = binary_exponent(math_1)
-    return (res * 2)
+    return (res)
 end
 
 func fixed_64_64_log_2{pedersen_ptr : HashBuiltin*, range_check_ptr, bitwise_ptr : BitwiseBuiltin*}(
